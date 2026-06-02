@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from rag import bot
+from rag import get_bot
 
 app = FastAPI()
+bot = get_bot()
 
 class QuestionRequest(BaseModel):
     question: str
