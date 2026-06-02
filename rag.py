@@ -23,7 +23,7 @@ nest_asyncio.apply()
 load_dotenv()
 
 # ── Config ────────────────────────────────────────────────────────────────────
-UNIVERSITY_PDF  = "Azmiu_info.pdf"
+UNIVERSITY_PDF  = os.getenv("UNIVERSITY_PDF", "Azmiu_info.pdf")
 BOT_NAME        = "ScholaraBot"
 UNIVERSITY_NAME = "Azərbaycan Memarlıq və İnşaat Universiteti (AzMİU)"
 LOG_FILE        = "version1_azmiu_scholara_logs.csv"
@@ -80,6 +80,8 @@ STRİKT CAVABLANDIRMA QAYDALARI:
 class UniBotRAG:
     def __init__(self):
         logging.info("UniBotRAG GPT-4o-mini və Page-Level axtarışla başladılır...")
+        if not OPENAI_API_KEY:
+            raise RuntimeError("OPENAI_API_KEY is not set.")
         self.embeddings = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-large")
         self.reranker = CrossEncoder("BAAI/bge-reranker-large")
         
@@ -303,11 +305,16 @@ class UniBotRAG:
         raw_chunks_logged = [doc.page_content[:500] for _, doc in ranked[:5]]
         return response.strip(), raw_chunks_logged
 
-# ── Bot instansiyası ──────────────────────────────────────────────────────────
-bot = UniBotRAG()
+# ── Bot instansiyası ─────────────────────────────────────────────────────────
+_bot_instance = None
 
-if not bot.load_university_pdf("Azmiu_info.pdf"):
-    raise Exception("PDF loaded failed")
+def get_bot() -> "UniBotRAG":
+    global _bot_instance
+    if _bot_instance is None:
+        _bot_instance = UniBotRAG()
+        if not _bot_instance.load_university_pdf(UNIVERSITY_PDF):
+            raise RuntimeError(f"Failed to load PDF: {UNIVERSITY_PDF}")
+    return _bot_instance
 
 # ── Köməkçi funksiyalar ───────────────────────────────────────────────────────
 def smart_escape(text: str) -> str:
@@ -354,6 +361,9 @@ def log_to_csv(user_id, question, answer, chunks: list[str], status="Baxılmayı
         logging.error(f"CSV Log xətası: {e}")
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    if not bot.load_university_pdf(UNIVERSITY_PDF):
-        logging.critical("PDF yüklənmədi. Sistem dayandırılır.")
+    try:
+        get_bot()
+        logging.info("RAG initialized successfully.")
+    except Exception as exc:
+        logging.critical("Initialization failed: %s", exc)
         raise SystemExit(1)
