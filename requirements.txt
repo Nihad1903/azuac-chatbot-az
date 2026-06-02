@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-telegram-bot[job-queue,rate-limiter]
+langchain-core
+langchain-huggingface
+langchain-qdrant
+langchain-openai
+sentence-transformers
+pymupdf
+pandas
+nest-asyncio
